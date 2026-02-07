@@ -33,9 +33,11 @@ st.set_page_config(
 # ================= LOAD MODEL =================
 @st.cache_resource
 def load_model():
-    import os
-    MODEL_PATH = os.path.join(os.path.dirname(__file__), "churn_pipeline.pkl")
+    MODEL_PATH = "churn_pipeline.pkl"  # same folder
     return joblib.load(MODEL_PATH)
+
+pipeline = load_model()
+
 
 
 # ================= PREMIUM COLORFUL UI (UNCHANGED) =================
@@ -106,10 +108,30 @@ st.subheader("🧾 Customer Information")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    gender = st.selectbox("Gender", ["Male", "Female"])
-    senior = st.selectbox("Senior Citizen", ["No", "Yes"])
-    partner = st.selectbox("Partner", ["No", "Yes"])
-    dependents = st.selectbox("Dependents", ["No", "Yes"])
+    gender = st.selectbox(
+        "👤 Gender of the Customer",
+        ["Male", "Female"],
+        help="Select the customer's gender. This may affect subscription behavior."
+    )
+    
+    senior = st.selectbox(
+        "👴 Is the Customer a Senior Citizen?",
+        ["No", "Yes"],
+        help="Senior citizens may have different churn patterns compared to younger customers."
+    )
+    
+    partner = st.selectbox(
+        "💑 Does the Customer have a Partner?",
+        ["No", "Yes"],
+        help="Indicates whether the customer has a spouse/partner, which may influence retention."
+    )
+    
+    dependents = st.selectbox(
+        "👶 Does the Customer have Dependents?",
+        ["No", "Yes"],
+        help="Shows if the customer has children or dependents, which could impact churn likelihood."
+    )
+
 
 with col2:
     tenure = st.slider("Tenure (Months)", 0, 72, 12)
