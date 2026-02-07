@@ -1,0 +1,92 @@
+# ================= train_model.py =================
+import os
+import joblib
+import pandas as pd
+import numpy as np
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
+
+# ================= PATH SETUP =================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CSV_PATH = os.path.join(BASE_DIR, "teleco_churn.csv")
+MODEL_PATH = os.path.join(BASE_DIR, "..", "churn_pipeline.pkl")
+
+# ================= LOAD DATA =================
+df = pd.read_csv(CSV_PATH)
+
+# ================= CLEAN DATA =================
+df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
+df.dropna(inplace=True)
+
+# Target
+y = df["Churn"].map({"Yes": 1, "No": 0})
+X = df.drop("Churn", axis=1)
+
+# ================= FEATURE TYPES =================
+categorical_features = [
+    "gender", "Partner", "Dependents",
+    "PhoneService", "MultipleLines",
+    "InternetService", "OnlineSecurity",
+    "OnlineBackup", "DeviceProtection",
+    "TechSupport", "StreamingTV",
+    "StreamingMovies", "Contract",
+    "PaperlessBilling", "PaymentMethod"
+]
+
+numerical_features = [
+    "SeniorCitizen", "tenure",
+    "MonthlyCharges", "TotalCharges"
+]
+
+# ================= PREPROCESSOR =================
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("num", StandardScaler(), numerical_features),
+        ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features)
+    ]
+)
+
+# ================= MODEL (FIXED) =================
+model = RandomForestClassifier(
+    n_estimators=300,
+    max_depth=12,
+    min_samples_split=10,
+    class_weight="balanced",   # 🔥 THIS FIXES YOUR ISSUE
+    random_state=42
+)
+
+# ================= PIPELINE =================
+pipeline = Pipeline(
+    steps=[
+        ("preprocessor", preprocessor),
+        ("model", model)
+    ]
+)
+
+# ================= TRAIN / TEST =================
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    stratify=y,
+    random_state=42
+)
+
+pipeline.fit(X_train, y_train)
+
+# ================= EVALUATION =================
+y_pred = pipeline.predict(X_test)
+y_prob = pipeline.predict_proba(X_test)[:, 1]
+
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("ROC-AUC:", roc_auc_score(y_test, y_prob))
+print("\nClassification Report:\n")
+print(classification_report(y_test, y_pred))
+
+# ================= SAVE MODEL =================
+joblib.dump(pipeline, MODEL_PATH)
+print(f"\n✅ Model saved as churn_pipeline.pkl")
